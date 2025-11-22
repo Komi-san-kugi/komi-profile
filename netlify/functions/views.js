@@ -1,39 +1,29 @@
-const { getStore } = require('@netlify/blobs');
-
 exports.handler = async (event, context) => {
-    // Enable CORS
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     };
 
-    // Handle preflight
     if (event.httpMethod === 'OPTIONS') {
         return { statusCode: 200, headers, body: '' };
     }
 
     try {
-        // Get Netlify Blobs store
-        const store = getStore('views');
+        // Proxy to counterapi.com to avoid CORS and Blobs setup
+        // Using 'komi-profile' as namespace and 'views' as key
+        const response = await fetch('https://api.counterapi.com/v1/komi-profile/views/up');
+        const data = await response.json();
 
-        // Get current views
-        let views = await store.get('count', { type: 'json' });
-        views = views ? views.count : 0;
-
-        // Increment
-        views++;
-
-        // Save back
-        await store.set('count', JSON.stringify({ count: views }));
+        console.log('CounterAPI response:', data);
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ success: true, views })
+            body: JSON.stringify({ success: true, views: data.count })
         };
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error proxying to CounterAPI:', error);
         return {
             statusCode: 500,
             headers,
